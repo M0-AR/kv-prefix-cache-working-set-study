@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="380" role="img">
+<rect width="720" height="380" fill="#ffffff"/>
+<text x="360" y="28" text-anchor="middle" font-size="17" font-family="sans-serif" font-weight="bold">Live BurstGPT-scale replay (EXP-05, n=2000 live rows)</text>
+<line x1="56" y1="324.0" x2="664" y2="324.0" stroke="#e5e7eb"/>
+<text x="48" y="328.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.00</text>
+<line x1="56" y1="257.0" x2="664" y2="257.0" stroke="#e5e7eb"/>
+<text x="48" y="261.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.25</text>
+<line x1="56" y1="190.0" x2="664" y2="190.0" stroke="#e5e7eb"/>
+<text x="48" y="194.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.50</text>
+<line x1="56" y1="123.0" x2="664" y2="123.0" stroke="#e5e7eb"/>
+<text x="48" y="127.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.75</text>
+<line x1="56" y1="56.0" x2="664" y2="56.0" stroke="#e5e7eb"/>
+<text x="48" y="60.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">1.00</text>
+<text x="56.0" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">8</text>
+<text x="157.3" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">16</text>
+<text x="258.7" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">32</text>
+<text x="360.0" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">64</text>
+<text x="461.3" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">128</text>
+<text x="562.7" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">256</text>
+<text x="664.0" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">512</text>
+<text x="360" y="374" text-anchor="middle" font-size="12" font-family="sans-serif" fill="#374151">capacity (pages, log scale)</text>
+<polyline points="56.0,318.2 157.3,312.4 258.7,289.2 360.0,276.2 461.3,266.5 562.7,214.7 664.0,105.7" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+<circle cx="56.0" cy="318.2" r="4" fill="#2563eb"/>
+<circle cx="157.3" cy="312.4" r="4" fill="#2563eb"/>
+<circle cx="258.7" cy="289.2" r="4" fill="#2563eb"/>
+<circle cx="360.0" cy="276.2" r="4" fill="#2563eb"/>
+<circle cx="461.3" cy="266.5" r="4" fill="#2563eb"/>
+<circle cx="562.7" cy="214.7" r="4" fill="#2563eb"/>
+<circle cx="664.0" cy="105.7" r="4" fill="#2563eb"/>
+<text x="66" y="42" font-size="12" font-family="sans-serif" fill="#2563eb">■ live-scale replay hit rate</text>
+<line x1="629.4" y1="56" x2="629.4" y2="324" stroke="#9ca3af" stroke-dasharray="5,4"/>
+<text x="629.4" y="54" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#6b7280">ws80=404</text>
+</svg>

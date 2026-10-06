@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="360" role="img">
+<rect width="680" height="360" fill="#ffffff"/>
+<text x="340" y="28" text-anchor="middle" font-size="17" font-family="sans-serif" font-weight="bold">Session locality decides reuse (EXP-06, 64-page cache)</text>
+<line x1="60" y1="300.0" x2="620" y2="300.0" stroke="#e5e7eb"/>
+<text x="52" y="304.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.00</text>
+<line x1="60" y1="240.0" x2="620" y2="240.0" stroke="#e5e7eb"/>
+<text x="52" y="244.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.24</text>
+<line x1="60" y1="180.0" x2="620" y2="180.0" stroke="#e5e7eb"/>
+<text x="52" y="184.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.49</text>
+<line x1="60" y1="120.0" x2="620" y2="120.0" stroke="#e5e7eb"/>
+<text x="52" y="124.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.73</text>
+<line x1="60" y1="60.0" x2="620" y2="60.0" stroke="#e5e7eb"/>
+<text x="52" y="64.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.97</text>
+<rect x="140.0" y="91.3" width="120.0" height="208.7" fill="#2563eb" rx="4"/>
+<text x="200.0" y="85.3" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="bold">0.846</text>
+<text x="200.0" y="318" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#374151">sequential</text>
+<rect x="420.0" y="204.3" width="120.0" height="95.7" fill="#7c3aed" rx="4"/>
+<text x="480.0" y="198.3" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="bold">0.388</text>
+<text x="480.0" y="318" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#374151">interleaved</text>
+<text x="340" y="356" text-anchor="middle" font-size="12" font-family="sans-serif" fill="#374151">token hit rate</text>
+</svg>

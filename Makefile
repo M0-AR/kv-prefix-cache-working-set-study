@@ -1,4 +1,4 @@
-.PHONY: setup run test docker-build docker-run clean
+.PHONY: setup run test figures demo docker-build docker-run clean
 
 setup:
 	pip install -r requirements.txt
@@ -8,6 +8,12 @@ run:
 
 test:
 	python -m pytest tests/ -q
+
+figures:
+	python assets/generate_figures.py
+
+demo:
+	./scripts/demo.sh
 
 docker-build:
 	docker compose build

@@ -1,3 +1,217 @@
+# KV Prefix-Cache Working-Set Study
+
+> **One line:** A from-scratch, fully reproducible study that proves how LLM servers skip repeated prompt work with KV prefix caching — and measures exactly how much cache your workload needs.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](requirements.txt)
+[![Docker ready](https://img.shields.io/badge/docker-ready-blue.svg)](Dockerfile)
+[![Experiments: 6 passing](https://img.shields.io/badge/experiments-6_passing-brightgreen.svg)](experiments/run_all.py)
+[![Results reproduced](https://img.shields.io/badge/results-reproduced-success.svg)](results/)
+[![Interactive site](https://img.shields.io/badge/site-preview.html-orange.svg)](preview.html)
+
+**[🌐 Open the interactive site](preview.html)** · **[📖 Beginner guide](#-beginner-guide--read-this-and-you-are-a-professional)** · **[🧪 Quiz yourself](#-test-yourself--interactive-quiz)** · **[🎬 Demo](#-demo--watch-it-run)** · **[📊 Results](#6-results-all-values-are-executed-outputs-in-results)**
+
+---
+
+## CEO summary (30 seconds)
+
+**AI agents resend their whole conversation on every turn; naive servers redo all prompt computation every time, and at 70B scale that state costs 320 KiB per token (10 GiB per 32K context).** This repo proves — with runnable code, not slides — that caching attention keys/values and reusing exact token prefixes removes the repeated work, then measures the real trade: **122 cache pages buy 70% reuse and 136 buy 80% on our trace, while 90% is unreachable at any tested capacity, and simply keeping same-session turns together beats interleaving 0.846 to 0.388.** Everything reproduces in one command (`docker compose up --build`), grounds itself in live public BurstGPT data, and is written so anyone can follow it from zero to professional.
+
+---
+
+## What you get here
+
+| Artifact | Location | What it is |
+|---|---|---|
+| 🔬 Experiments 01–06 | `experiments/` | Six asserted checks; every paper number comes from these |
+| 🧱 Library | `src/` | Toy causal attention, LRU prefix cache, Mattson analyzer, memory model, trace loader |
+| 📦 Measured results | `results/` | JSON + CSV regenerated on every run (never hand-edited) |
+| 🌐 Interactive site | `preview.html` (+ `docs/index.html` for Pages) | Animated demos, charts, step-by-step walkthrough, quiz |
+| 📊 Figures | `assets/*.svg` | Generated from measured results by `assets/generate_figures.py` |
+| 🎬 Demo | `scripts/demo.sh`, `docs/DEMO.md`, `docs/demo.tape` | 60-second terminal demo + GIF/MP4 recording guide |
+| 🐳 Reproducible runner | `Dockerfile`, `docker-compose.yml`, `Makefile` | Bit-identical reruns anywhere |
+| ✅ Regression tests | `tests/` | Fast offline suite (5 tests) |
+
+## Quick start (3 steps, ~2 minutes)
+
+```bash
+# 1. Get it (Docker path needs nothing else installed)
+git clone <your-fork-url> && cd kv-prefix-cache-working-set-study
+
+# 2. Run all six experiments
+docker compose up --build
+# without Docker:  pip install -r requirements.txt && python experiments/run_all.py
+
+# 3. Check you see this last line:
+# ALL EXPERIMENTS PASSED
+```
+
+Then open `preview.html` in any browser (or the hosted Pages link below) for the visual tour.
+
+## Table of contents
+
+- [CEO summary](#ceo-summary-30-seconds)
+- [Beginner guide](#-beginner-guide--read-this-and-you-are-a-professional)
+- [Features](#-features)
+- [User stories](#-user-stories--who-this-repo-is-for)
+- [Demo](#-demo--watch-it-run)
+- [Interactive site + GitHub Pages](#-interactive-site--github-pages)
+- [Results gallery](#-results-gallery)
+- [Test yourself (quiz)](#-test-yourself--interactive-quiz)
+- [The full paper](#prefix-caching-is-a-memorycompute-trade-not-a-free-lunch-verifying-kv-reuse-lru-working-sets-and-the-capacityhit-rate-knee-from-first-principles-to-live-traces)
+- [FAQ](#-faq)
+- [Glossary](#-glossary)
+- [Troubleshooting](#-troubleshooting)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## 🌱 Beginner guide — read this and you are a professional
+
+*You will know more than most interview candidates. No prior knowledge assumed. Let's work this out in a step-by-step way to be sure we have the right answer.*
+
+### Step 0 — The situation (30 seconds)
+
+You chat with an AI agent. It reads a document, calls a tool, answers, calls another tool, answers again. Each time, your app sends **the whole conversation so far** back to the model — instructions, history, tool outputs, everything. The server must process all of it before writing the next word. That processing step is called **prefill**.
+
+### Step 1 — Why prefill hurts (1 minute)
+
+Think of prefill like re-reading an entire book every time someone asks you one more question about it. The longer the book, the slower the first word of your answer. Engineers measure **TTFT** (time to first token): how long until the answer *starts*. Long conversations → long prefill → slow TTFT → unhappy users and big GPU bills.
+
+### Step 2 — The trick: remember your homework (2 minutes)
+
+Inside the model, every word is converted into two small lists of numbers: a **key** (what this word offers) and a **value** (what this word means). A new word asks a **query**: "which past words matter for me?" It scores its query against all past **keys**, then blends the matching **values**. Keys and values together are the **KV cache**.
+
+Here is the key insight, and it is worth saying slowly: **in a normal (causal) model, words can only look backward, never forward.** So when word 101 arrives, words 1–100 haven't changed. Their keys and values are still correct. The server keeps them and only computes word 101. That is the whole trick — Experiment 01 proves the cached answer equals the recomputed answer to within 0.00000000000001.
+
+### Step 3 — From one chat to many chats (2 minutes)
+
+Now the agent sends turn 2, which *starts with* turn 1's exact words plus new tool output. The server kept turn 1's keys and values, recognizes the matching beginning (**prefix**), and skips reprocessing it. It only processes the new tail. Experiment 02 shows the catch: the match is on **exact words-as-numbers (tokens)**, not meaning. Rephrase the same idea with different words and the cache mostly misses (3/3 blocks hit for the exact repeat, only 1/3 for the paraphrase). Similar ≠ reusable.
+
+### Step 4 — The catch: memory (2 minutes)
+
+Every remembered word costs real memory on **every layer** of the model. Our measurements (Experiment 03): an 8B-class model costs 128 KiB per word, a 70B-class model **320 KiB per word — 10 GiB for a 32K-word conversation**. A hundred such chats approach a terabyte. GPU memory is finite, so old entries get **evicted** (thrown out, least-recently-used first) and must be recomputed next time. Small cache in our demo: **0% reuse**. Bigger cache: **67% reuse**. Memory now vs. computation later — that is the trade.
+
+### Step 5 — The professional question (3 minutes)
+
+So: **how much cache buys the hit rate we need?** Plot reuse (hit rate) against cache size and you get a curve that rises fast, then flattens — the **knee**. Past the knee, more memory buys almost nothing. The smallest size that reaches your target is the **working set**. There is a beautiful 1970 algorithm (Mattson stack distances) that gets the *entire curve in a single pass* instead of re-simulating every size — Experiment 04 verifies it matches brute force to **exactly 0.0** difference, and finds: **122 pages for 70%, 136 for 80%, and 90% unreachable** on that workload. Targets matter: "the" working set doesn't exist until you name your target.
+
+### Step 6 — Reality check (2 minutes)
+
+We fetched **2,000 real public workload rows (BurstGPT)** live during the experiment: average request 552 tokens, median 334, the worst 1% over 2,000. Heavy-tailed reality, not tidy Poisson math. Scaled to that reality, the working set is **404 pages at 80%** (Experiment 05). Then the hidden patterns (Experiment 06): serve one conversation at a time and reuse is **0.846**; interleave twelve conversations and it collapses to **0.388** — scheduling beats raw memory. And a warning that will save your career: comparing block sizes by *block count* instead of *token budget* makes coarse blocks look 16× better than they are. Always normalize by tokens.
+
+### Step 7 — You are now dangerous (in a good way)
+
+You can now answer, from first principles with numbers: why agents are expensive, what prefix caching reuses and what breaks it, what a token costs in bytes, what a working set is and how to size it, and which measurement traps to avoid. The quiz below and the interactive site will lock it in. Welcome — you genuinely do know more than most interview candidates on this topic.
+
+---
+
+## ✨ Features
+
+| Feature | Description | Where |
+|---|---|---|
+| 🔬 6 asserted experiments | Every claim executable; failures fail loudly | `experiments/`, `results/` |
+| 🧮 Toy attention core | Full vs. cached decoding proven equal (1.15e-14) | `src/attention_kv.py` |
+| 🗂️ vLLM-faithful LRU prefix cache | Complete-block prefix hits, LRU eviction, token+block rates | `src/prefix_cache.py` |
+| 📐 One-pass Mattson analyzer | Whole capacity curve in one pass; exact vs. naive | `src/stack_distance.py` |
+| 🧾 Byte-level memory model | Per-model bytes/token, GiB/context, 1/(1−r) leverage | `src/memory_model.py` |
+| 🌍 Live-data replay | BurstGPT fetched at runtime; source recorded in output | `src/trace_loader.py` |
+| 📊 Generated figures | SVGs built from measured results, never hand-drawn | `assets/` |
+| 🌐 Interactive site | Animations, charts, walkthrough, graded quiz — offline-capable single file | `preview.html`, `docs/index.html` |
+| 🎬 Demo pipeline | 60-s terminal demo + reproducible GIF/MP4 guide | `scripts/demo.sh`, `docs/DEMO.md` |
+| 🐳 One-command reproduction | Docker + pinned deps + seeds; host == container | `Dockerfile`, `docker-compose.yml` |
+| ✅ Offline test suite | 5 fast tests, no network needed | `tests/` |
+| 📖 Donkey-proof docs | Beginner guide, FAQ, glossary, troubleshooting, recipes | This file |
+
+## 👥 User stories — who this repo is for
+
+- **🎓 The student:** "I keep hearing KV cache and prefix caching — what *actually* happens?" → Read the Beginner guide (15 min), play the animated demo in `preview.html`, take the quiz. You will be able to whiteboard the whole mechanism.
+- **💼 The interview candidate:** "I need to sound senior on LLM inference." → Memorize 5 numbers: 320 KiB/token, 10 GiB/32K, 122 @70% / 136 @80%, 0.846→0.388 locality gap, normalize-by-tokens rule. Each has an experiment behind it — cite EXP-01…06.
+- **🛠️ The inference engineer:** "How big should my prefix cache be?" → Copy `src/stack_distance.py` + `src/prefix_cache.py` onto your own request trace; read off your working set and knee exactly as EXP-04 does.
+- **📈 The capacity planner:** "What does 10K concurrent agent sessions cost?" → Combine `src/memory_model.py` bytes/token with your measured hit curve and the `1/(1−r)` leverage to price memory vs. compute.
+- **🔬 The researcher:** "I need a baseline + extension points." → LRU+Mattson baseline is implemented and verified; Section 10 lists five PhD-grade extensions (online tracking, session-aware routing, normalized block sweeps, policy bake-offs, restore-vs-recompute frontiers).
+- **👔 The decision-maker:** "Just give me the bottom line." → Read the CEO summary. Memory now vs. computation later; size to the knee, buy locality past it.
+
+## 🎬 Demo — watch it run
+
+**60-second terminal demo** (runs the real suite, prints the headline numbers):
+
+```bash
+./scripts/demo.sh
+```
+
+**Animated in-page demo** (no install): open `preview.html` → sections *Watch it work* — K/V reuse, prefix hits, and LRU eviction animate step by step.
+
+**Record your own GIF/MP4** (for sharing): full guide in [`docs/DEMO.md`](docs/DEMO.md) — scriptable VHS path (`docs/demo.tape`), asciinema path, and GUI path, with the pre-launch verification checklist. Place output at `assets/demo.gif` (< 2 MB) and link it here.
+
+## 🌐 Interactive site + GitHub Pages
+
+`preview.html` is a dependency-free single file (works double-clicked, offline). `docs/index.html` is the identical file for hosting.
+
+**Publish it (GitHub Pages, deploy-from-branch, 2026 flow):**
+
+1. Push this repo to GitHub.
+2. Open **Settings → Pages**.
+3. Under **Build and deployment → Source**, choose **Deploy from a branch**.
+4. Set **Branch** to `main` (or your default) and **Folder** to `/docs`, then **Save**.
+5. Wait ~1 minute; your site is live at `https://<user>.github.io/<repo>/`.
+6. Put that URL at the top of this README (replacing the `preview.html` link target) and in the repo's **About → Website** field with topics like `llm-inference`, `kv-cache`, `prefix-caching`, `capacity-planning`.
+
+(Alternative: publish from root `/` if you prefer `preview.html` as the entry point; `/docs` keeps the root clean and is the documented Pages source-folder option alongside root.)
+
+## 📊 Results gallery
+
+All figures generated from measured outputs (`python assets/generate_figures.py`).
+
+![Hit rate vs capacity — EXP-04](assets/fig_hitrate_curve.svg)
+
+*One-pass Mattson curve (== naive simulation, diff 0.0). Markers: working set 122 pages @70%, knee at 256.*
+
+![Session locality gap — EXP-06](assets/fig_locality_gap.svg)
+
+*Same requests, same cache: sequential 0.846 vs interleaved 0.388.*
+
+![Live BurstGPT-scale replay — EXP-05](assets/fig_live_replay.svg)
+
+*2000 live rows (mean 552 tokens); working set 404 pages @80%.*
+
+Full numbers: [Section 6](#6-results-all-values-are-executed-outputs-in-results) and `results/`.
+
+## 🧩 Test yourself — interactive quiz
+
+Ten questions, scratch-to-pro, with instant grading in [`preview.html`](preview.html#quiz) (also listed here so the repo is self-contained):
+
+1. What does the prefill stage do, and what does TTFT measure?
+2. In causal attention, why do earlier tokens' K/V rows stay valid when new tokens arrive?
+3. Cached vs. recomputed decoding in EXP-01 agreed to what error?
+4. Exact repeat vs. paraphrase hit how many blocks in EXP-02 — and what does that prove?
+5. What does a 70B-GQA token cost, and a 32K context?
+6. Small (4-block) vs. big (32-block) cache hit rates in the eviction demo?
+7. What is a working set, and what were ws70/ws80 in EXP-04? Why is ws90 null?
+8. Mattson vs. naive simulation differed by how much?
+9. Live BurstGPT: n, mean, p50, p99 — and ws80 of the replay?
+10. Name the H1/H2b/H4 hidden patterns with their numbers — and the normalization rule.
+
+<details>
+<summary>Answers (try first!)</summary>
+
+1. Prefill processes the whole prompt at once and emits the first token; TTFT = time until that first token.
+2. Tokens only attend backward, so earlier rows never depend on later tokens — stored K/V remain correct inputs.
+3. 1.15e-14 (float noise; assertion < 1e-9).
+4. 3/3 vs 1/3 — caching keys on exact tokens, not meaning.
+5. 327,680 bytes (320 KiB); 10 GiB per 32K.
+6. 0.0 vs 0.667 — evicted state must be recomputed.
+7. Min capacity reaching a target hit rate; 122 and 136 pages; 90% exceeds the trace's max (0.845) — non-convergence, as in production studies.
+8. 0.0 at every capacity — the one-pass theorem, verified.
+9. n=2000, mean 551.7, p50 334, p99 2018; ws80 = 404 pages.
+10. H1: sequential 0.846 vs interleaved 0.388 (Δ 0.458) — concurrency shreds locality. H2b: equal-block-count comparison fakes a 0.253→0.846 win at 16× memory — always fix the token budget. H4: 0.244 compulsory cold-start misses. Rule: normalize by tokens/bytes, never block count.
+
+</details>
+
+---
+
 # Prefix Caching Is a Memory–Compute Trade, Not a Free Lunch: Verifying KV Reuse, LRU Working Sets, and the Capacity–Hit-Rate Knee from First Principles to Live Traces
 
 **A reproducible, from-scratch empirical study. No local code was reused; every claim below is backed by an executable experiment in this repo. All numbers are measured outputs, not illustrations.**
@@ -138,7 +352,7 @@ The 320 KiB/token figure matches published 2026 engineering guides; 100 concurre
 
 ### 5.3 Best-practice compliance
 
-One web-search at a time during research (rate-limit discipline); pinned dependencies; seeded RNGs (`PYTHONHASHSEED=0` in compose); live-data source recorded in output JSON (no silent fallback); Docker reproduction bit-identical to host; fast offline `pytest` suite independent of network.
+Pinned dependencies; seeded RNGs (`PYTHONHASHSEED=0` in compose); live-data source recorded in output JSON (no silent fallback); Docker reproduction bit-identical to host; fast offline `pytest` suite independent of network.
 
 ---
 
@@ -215,7 +429,7 @@ Prefix reuse is a timing side channel (CVE-2025-46570): TTFT differences reveal 
 
 - New workload: add a generator in `src/trace_loader.py`, expand via `trace_to_page_accesses`, analyze with `stack_distances`/`hitrate_curve`/`working_set`.
 - New policy: subclass the `PrefixCacheLRU.request` loop; verify against `naive_hitrate` at matched capacities.
-- New figure: `results/04_curve.csv` is the paper-figure source; plot capacity (log-x) vs. hit rate with knee + working-set markers.
+- New figure: `results/04_curve.csv` is the paper-figure source; plot capacity (log-x) vs. hit rate with knee + working-set markers. Regenerate SVGs with `python assets/generate_figures.py`.
 
 ## References
 
@@ -227,6 +441,89 @@ Prefix reuse is a timing side channel (CVE-2025-46570): TTFT differences reveal 
 - Yao et al. *BurstGPT.* arXiv:2401.17644 (2024). — public trace (live-fetched here); `HPMLL/BurstGPT`.
 - ShareGPT prefix-cache eviction study (`superAttention/llm-prefix-cache-analysis`) — Belady-oracle methodology reference.
 - flozi.net KVSET guide (Sept 2026) — independent one-pass verification pattern followed in EXP-04.
+
+---
+
+## ❓ FAQ
+
+**Do I need a GPU?** No. Every experiment is NumPy-only and runs on any laptop in seconds; Docker needs nothing but Docker.
+
+**Is prefix caching "free"?** No — that is the paper's thesis. It saves prefill compute but spends HBM; eviction, lookup, and transfer are real costs. Size to the knee, then buy locality.
+
+**Why did my paraphrased prompt miss the cache?** Block keys embed all prior tokens. One changed word re-keys its block and every block after it. Keep system prompts byte-stable to protect reuse.
+
+**What capacity should I provision?** No universal number: measure your trace, pick a target (e.g. 80%), read the working set off the Mattson curve, add headroom for drift, and re-measure continuously — workloads shift.
+
+**Can I use this on my own trace?** Yes: format requests as token lists, expand with `trace_to_page_accesses`, run `stack_distances`/`hitrate_curve`/`working_set`. See `experiments/04_hitrate_capacity_curve.py` as the recipe.
+
+**Why does interleaving hurt so much?** LRU keeps what was touched recently. Round-robin concurrency pushes a session's pages out before its next turn arrives. Session affinity (same worker, sticky routing) restores locality — EXP-06 measures +0.458.
+
+**Block size 64 "won" — should I always use huge blocks?** Not from this data alone: our comparison fixed the token budget and prefixes were long and stable. Partial tails and churn punish coarse blocks elsewhere. Sweep block sizes on *your* trace, normalized by tokens.
+
+**Offline machine?** Everything except EXP-05's live fetch works offline (it records a `synthetic-fallback` source flag instead of failing). Tests never touch the network.
+
+**Where is the website?** `preview.html` (single file, offline). Hosted: enable Pages per [above](#-interactive-site--github-pages) — `docs/index.html` is the same file.
+
+## 📖 Glossary
+
+- **Prefill:** processing the whole prompt at once; produces the first output token. Compute-heavy.
+- **Decode:** generating tokens one at a time, each attending to all prior tokens. Memory-heavy.
+- **TTFT / TPOT:** time to first token / time per output token. Prefix hits cut TTFT.
+- **Token:** the numbered unit the model actually sees (roughly a word piece). Caching matches on tokens, not characters or meanings.
+- **Key / Value / Query (K/V/Q):** per-token projections; queries score keys, scores weight values.
+- **KV cache:** stored keys+values of processed tokens, reused instead of recomputed.
+- **Prefix cache:** cross-request reuse of K/V blocks for a shared leading token span.
+- **Block / page:** fixed-size token group (e.g. 16 tokens) — the unit of caching and eviction here.
+- **Hit rate:** fraction of needed blocks (or tokens) served from cache.
+- **LRU:** evict the least-recently-used entry first. Our analysis is exact for LRU.
+- **Stack distance:** how many distinct pages were touched since this page's last use. Hit at capacity C iff distance ≤ C.
+- **Working set:** smallest capacity reaching a chosen hit-rate target (e.g. ws80 = 136 pages).
+- **Knee:** capacity past which extra memory buys negligible reuse.
+- **Session vs. structural reuse:** hits from the same conversation's history vs. from templates/tool outputs repeated across conversations.
+- **Compulsory miss:** first-ever use of a page — unhittable at any capacity.
+- **Cache salt:** per-tenant string mixed into block hashes so tenants can't hit (or probe) each other's prefixes.
+
+## 🔧 Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `pip install` refuses (externally managed env) | PEP 668 system Python | Use `pip install --break-system-packages -r requirements.txt`, a venv, or Docker |
+| EXP-05 shows `synthetic-fallback` | No network to raw.githubusercontent.com | Inspect `results/05.json` → `burst_url`; rerun online for live numbers |
+| `docker compose up` slow first time | Base image pull + pip install | Subsequent runs are cached; use `make run` for host runs |
+| Quiz/animations don't load | Opened via restrictive viewer | Open `preview.html` in Chrome/Firefox/Edge directly; no server needed |
+| Pages shows 404 | Wrong source folder | Settings → Pages → Branch `main`, Folder `/docs`; ensure `docs/index.html` exists |
+
+## 🗺️ Roadmap
+
+- [x] 6 verified experiments + live BurstGPT replay
+- [x] Interactive site + quiz + generated figures
+- [ ] Recorded `assets/demo.gif`/`demo.mp4` via `docs/demo.tape`
+- [ ] ShareGPT-mix trace + Belady-oracle policy bake-off
+- [ ] Hosted Pages URL + star-history + CI badges (added only when live, never broken)
+- [ ] Online working-set tracker example on a sample gateway log
+
+## 🤝 Contributing
+
+1. Fork → branch (`feature/<name>`) → focused PR.
+2. Never add a number without an experiment: code it, assert it, regenerate `results/`, run `python assets/generate_figures.py`.
+3. Verify before push: `python experiments/run_all.py`, `python -m pytest tests/ -q`, `docker compose up --build`.
+4. Keep the beginner guide, FAQ, and glossary in sync with new findings; update the quiz.
+
+## 📄 License
+
+MIT — see [LICENSE](LICENSE). Data fetched live (BurstGPT) belongs to its publishers and is used as length statistics only.
+
+## 📚 Citation
+
+```bibtex
+@software{kv_prefix_cache_working_set_study_2026,
+  title  = {KV Prefix-Cache Working-Set Study: verifying KV reuse, LRU working
+            sets, and the capacity-hit-rate knee from first principles to live traces},
+  year   = {2026},
+  note   = {6 asserted experiments, live BurstGPT replay, Docker reproduction},
+  url    = {https://github.com/<user>/kv-prefix-cache-working-set-study}
+}
+```
 
 ---
 

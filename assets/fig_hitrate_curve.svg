@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="380" role="img">
+<rect width="720" height="380" fill="#ffffff"/>
+<text x="360" y="28" text-anchor="middle" font-size="17" font-family="sans-serif" font-weight="bold">Hit rate vs cache capacity (EXP-04, 930 accesses)</text>
+<line x1="56" y1="324.0" x2="664" y2="324.0" stroke="#e5e7eb"/>
+<text x="48" y="328.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.00</text>
+<line x1="56" y1="257.0" x2="664" y2="257.0" stroke="#e5e7eb"/>
+<text x="48" y="261.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.25</text>
+<line x1="56" y1="190.0" x2="664" y2="190.0" stroke="#e5e7eb"/>
+<text x="48" y="194.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.50</text>
+<line x1="56" y1="123.0" x2="664" y2="123.0" stroke="#e5e7eb"/>
+<text x="48" y="127.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">0.75</text>
+<line x1="56" y1="56.0" x2="664" y2="56.0" stroke="#e5e7eb"/>
+<text x="48" y="60.0" text-anchor="end" font-size="11" font-family="sans-serif" fill="#4b5563">1.00</text>
+<text x="56.0" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">4</text>
+<text x="142.9" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">8</text>
+<text x="229.7" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">16</text>
+<text x="316.6" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">32</text>
+<text x="403.4" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">64</text>
+<text x="490.3" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">128</text>
+<text x="577.1" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">256</text>
+<text x="664.0" y="342" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#4b5563">512</text>
+<text x="360" y="374" text-anchor="middle" font-size="12" font-family="sans-serif" fill="#374151">capacity (pages, log scale)</text>
+<polyline points="56.0,324.0 142.9,300.9 229.7,242.7 316.6,230.1 403.4,212.8 490.3,121.7 577.1,97.5 664.0,97.5" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+<circle cx="56.0" cy="324.0" r="4" fill="#2563eb"/>
+<circle cx="142.9" cy="300.9" r="4" fill="#2563eb"/>
+<circle cx="229.7" cy="242.7" r="4" fill="#2563eb"/>
+<circle cx="316.6" cy="230.1" r="4" fill="#2563eb"/>
+<circle cx="403.4" cy="212.8" r="4" fill="#2563eb"/>
+<circle cx="490.3" cy="121.7" r="4" fill="#2563eb"/>
+<circle cx="577.1" cy="97.5" r="4" fill="#2563eb"/>
+<circle cx="664.0" cy="97.5" r="4" fill="#2563eb"/>
+<text x="66" y="42" font-size="12" font-family="sans-serif" fill="#2563eb">■ hit rate (Mattson = naive, diff 0.0)</text>
+<line x1="484.3" y1="56" x2="484.3" y2="324" stroke="#9ca3af" stroke-dasharray="5,4"/>
+<text x="484.3" y="54" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#6b7280">ws70=122</text>
+<line x1="577.1" y1="56" x2="577.1" y2="324" stroke="#9ca3af" stroke-dasharray="5,4"/>
+<text x="577.1" y="54" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#6b7280">knee=256</text>
+</svg>
