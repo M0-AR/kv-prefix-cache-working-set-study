@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KV Prefix-Cache Working-Set Study — Interactive Guide</title>
+<meta name="description" content="From-scratch, reproducible study of LLM KV prefix caching: watch it work, see measured results, take the quiz from zero to professional.">
+<style>
+:root{--bg:#0b1020;--bg2:#111936;--card:#162044;--line:#2b3a6b;--txt:#e8ecf8;--mut:#a7b3d6;--acc:#7dd3fc;--grn:#34d399;--red:#f87171;--amb:#fbbf24}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#0d1330 60%,#0b1020);color:var(--txt);line-height:1.6}
+a{color:var(--acc)}header.hero{max-width:1080px;margin:0 auto;padding:56px 20px 28px;text-align:center}
+.kicker{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 14px;color:var(--mut);font-size:13px;letter-spacing:.04em}
+h1{font-size:clamp(28px,4.6vw,52px);line-height:1.12;margin:18px 0 10px}
+.tag{color:var(--mut);font-size:clamp(15px,2vw,19px);max-width:820px;margin:0 auto}
+.badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:20px 0}
+.badges span{border:1px solid var(--line);background:#10173a;border-radius:999px;padding:4px 12px;font-size:13px;color:var(--txt)}
+.badges b{color:var(--grn)}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.btn{display:inline-block;background:var(--acc);color:#06121f;font-weight:700;border-radius:10px;padding:11px 20px;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+main{max-width:1080px;margin:0 auto;padding:0 20px 80px}
+section.card{background:rgba(22,32,68,.75);border:1px solid var(--line);border-radius:16px;padding:26px;margin:22px 0}
+h2{margin:4px 0 12px;font-size:26px}h3{margin:20px 0 8px;color:var(--acc)}
+.mut{color:var(--mut)}.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.tile{background:#0f1734;border:1px solid var(--line);border-radius:12px;padding:16px}
+.tile b{color:#fff}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border:1px solid var(--line);padding:8px 10px;text-align:left}th{background:#0f1734}
+code,kbd{background:#0a0f26;border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:13.5px}
+pre{background:#070b1d;border:1px solid var(--line);border-radius:12px;padding:14px;overflow:auto;font-size:13.5px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.tab{border:1px solid var(--line);background:#0f1734;color:var(--txt);border-radius:10px;padding:8px 14px;cursor:pointer}.tab.on{background:var(--acc);color:#06121f;font-weight:700}
+.stage{background:#070b1d;border:1px solid var(--line);border-radius:12px;padding:16px;min-height:190px;font-size:15px}
+.tok{display:inline-block;border:1px solid var(--line);border-radius:8px;padding:3px 9px;margin:3px;background:#10173a}.tok.hit{background:#052e22;border-color:var(--grn)}.tok.miss{background:#3a0f14;border-color:var(--red)}.tok.new{border-color:var(--amb)}
+.bar{height:14px;border-radius:7px;background:#0a0f26;border:1px solid var(--line);overflow:hidden;margin:6px 0}.bar>i{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#34d399)}
+canvas.chart{width:100%;height:300px;background:#070b1d;border:1px solid var(--line);border-radius:12px}
+.q{border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0;background:#0f1734}.q p{margin:6px 0 8px;font-weight:600}.q label{display:block;padding:6px 8px;border-radius:8px;cursor:pointer}.q label:hover{background:#162044}.q .ok{color:var(--grn);font-weight:700}.q .no{color:var(--red);font-weight:700}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:8px 0;background:#0f1734}summary{cursor:pointer;font-weight:600}
+footer{text-align:center;color:var(--mut);padding:30px 20px;font-size:13px}
+.score{font-size:20px;font-weight:800}.pill{display:inline-block;min-width:34px;text-align:center;border-radius:8px;background:#0a0f26;border:1px solid var(--line);padding:2px 8px;margin:2px}
+</style>
+</head>
+<body>
+<header class="hero">
+<div class="kicker">REPRODUCIBLE LLM-INFERENCE STUDY · 6 PASSING EXPERIMENTS · LIVE PUBLIC DATA</div>
+<h1>Stop recomputing your agent's past.<br>Cache it. Measure it. Size it.</h1>
+<p class="tag">Every turn of an AI agent resends the whole conversation. This study proves — with runnable code — how servers skip the repeated work with <b>KV prefix caching</b>, then measures the real trade: <b>122 pages buy 70% reuse, 136 buy 80%, 90% is unreachable</b>, and keeping sessions together beats interleaving <b>0.846 to 0.388</b>.</p>
+<div class="badges"><span>License <b>MIT</b></span><span>Python <b>3.12</b></span><span>Docker <b>ready</b></span><span>Experiments <b>6 passing</b></span><span>Results <b>reproduced</b></span><span>Site <b>offline-capable</b></span></div>
+<div class="cta"><a class="btn" href="#watch">▶ Watch it work</a><a class="btn ghost" href="#quiz">Take the 10-question quiz</a><a class="btn ghost" href="#run">Reproduce in 1 command</a></div>
+</header>
+<main>
+<section class="card" id="ceo"><h2>CEO summary — 30 seconds</h2>
+<p><b>AI agents resend their whole conversation on every turn; at 70B scale that state costs 320&nbsp;KiB per token (10&nbsp;GiB per 32K context).</b> Caching attention keys/values and reusing exact token prefixes removes the repeated work — cached decoding matches recomputation to 1.15e-14. <b>The trade: 122 cache pages buy 70% reuse and 136 buy 80%, while 90% is unreachable; session locality (0.846 vs 0.388) beats raw memory.</b> Everything reproduces in one command and grounds itself in live public data.</p></section>
+
+<section class="card" id="watch"><h2>Watch it work — animated demos</h2>
+<p class="mut">No install. Press play and read along. Each demo mirrors a real experiment in this repo.</p>
+<div class="tabs"><button class="tab on" data-t="d1">1 · K/V reuse (EXP-01)</button><button class="tab" data-t="d2">2 · Prefix hit vs paraphrase (EXP-02)</button><button class="tab" data-t="d3">3 · LRU eviction lab (EXP-03/06)</button></div>
+<div class="stage" id="stage"></div>
+<div style="margin-top:10px"><button class="tab" id="play">▶ Play</button> <button class="tab" id="step">Step →</button> <button class="tab" id="reset">Reset</button> <span class="mut" id="cap"></span></div>
+</section>
+
+<section class="card" id="charts"><h2>Measured results — the curves</h2>
+<p class="mut">Drawn live in your browser from the repo's executed outputs (results/04_curve.csv, 06.json, 05.json). Re-run the suite and these numbers move together.</p>
+<h3>Hit rate vs capacity — one-pass Mattson == naive simulation (diff 0.0)</h3>
+<canvas class="chart" id="c1" width="900" height="300"></canvas>
+<p class="mut">Markers: working set 122 pages @70% · knee at 256 · 90% unreachable (max 0.845).</p>
+<h3>Session locality decides reuse — same cache, same requests</h3>
+<canvas class="chart" id="c2" width="900" height="300"></canvas>
+<p class="mut">Sequential-by-session 0.846 vs round-robin interleaved 0.388 (Δ 0.458).</p>
+<h3>Live BurstGPT-scale replay — 2,000 real rows</h3>
+<canvas class="chart" id="c3" width="900" height="300"></canvas>
+<p class="mut">Mean 551.7 · p50 334 · p99 2018 tokens; working set 404 pages @80%.</p>
+</section>
+
+<section class="card" id="steps"><h2>Zero to professional — 7 steps</h2>
+<div class="grid g2">
+<div class="tile"><b>0 · The situation.</b> Your app resends the whole history each turn; the server reprocesses it (prefill) before answering.</div>
+<div class="tile"><b>1 · Why it hurts.</b> Long context → long prefill → slow first word (TTFT) and big bills.</div>
+<div class="tile"><b>2 · The trick.</b> Each word stores a key+value; new words only score old keys. Old rows never change → keep them. Error vs recompute: 1.15e-14.</div>
+<div class="tile"><b>3 · Across requests.</b> Next turn starts with this turn's exact tokens → reuse the matching prefix. Paraphrases miss: 3/3 vs 1/3 blocks.</div>
+<div class="tile"><b>4 · The catch.</b> Memory: 320 KiB/token at 70B (10 GiB/32K). Small cache: 0% reuse. Bigger: 67%.</div>
+<div class="tile"><b>5 · The pro question.</b> How much cache for your target? Read the working set off the curve: 122 @70%, 136 @80%. Name the target first.</div>
+<div class="tile"><b>6 · Reality.</b> Live data is heavy-tailed (p99 ≈ 6× p50). Locality beats memory (0.846→0.388). Normalize block sizes by <i>tokens</i>, never block count.</div>
+<div class="tile"><b>7 · You.</b> Take the quiz below. Score 8+/10 and you can whiteboard this better than most interview loops.</div>
+</div></section>
+
+<section class="card" id="quiz"><h2>Quiz — scratch to pro (10 questions, graded live)</h2>
+<p class="mut">Pick an answer; feedback is instant. <span class="score" id="score">Score: 0 / 10</span></p>
+<div id="qs"></div>
+<div><button class="tab" id="grade">Grade all</button> <button class="tab" id="retry">Retry</button></div>
+</section>
+
+<section class="card" id="use"><h2>Who is this for &amp; how to use it</h2>
+<div class="grid g2">
+<div class="tile"><b>🎓 Students.</b> Beginner guide → demos → quiz. Goal: whiteboard K/V reuse and working sets from memory.</div>
+<div class="tile"><b>💼 Candidates.</b> Five numbers: 320 KiB · 10 GiB/32K · 122/136 · 0.846→0.388 · normalize-by-tokens. Each cites an experiment.</div>
+<div class="tile"><b>🛠️ Engineers.</b> Drop <code>stack_distance.py</code> + <code>prefix_cache.py</code> on your trace; read your working set and knee.</div>
+<div class="tile"><b>📈 Planners.</b> bytes/token × curve × 1/(1−r) prices memory vs compute for any concurrency.</div>
+<div class="tile"><b>🔬 Researchers.</b> Verified LRU+Mattson baseline; five extension ideas in README §10.</div>
+<div class="tile"><b>👔 Leaders.</b> CEO summary up top. Rule of thumb: size to the knee, buy locality past it.</div>
+</div>
+<h3 id="run">Reproduce in one command</h3>
+<pre>docker compose up --build
+# or: pip install -r requirements.txt &amp;&amp; python experiments/run_all.py
+# expect: ALL EXPERIMENTS PASSED   ·   tests: 5 passed</pre>
+<h3>Publish this page (GitHub Pages)</h3>
+<pre>Settings → Pages → Source: Deploy from a branch → Branch: main, Folder: /docs → Save
+# live at https://&lt;user&gt;.github.io/&lt;repo&gt;/  (~1 min). This file IS docs/index.html.</pre>
+</section>
+
+<section class="card"><h2>FAQ (short)</h2>
+<details><summary>Do I need a GPU?</summary>No. NumPy-only; seconds on a laptop.</details>
+<details><summary>Why did my reworded prompt miss?</summary>Block keys embed every prior token — one changed word re-keys its block and all after it. Keep system prompts byte-stable.</details>
+<details><summary>What capacity do I provision?</summary>Measure your trace, pick a target (e.g. 80%), read the working set, add drift headroom, re-measure continuously.</details>
+<details><summary>Is the KV cache "knowledge"?</summary>No — temporary attention state. Evict it and answers are identical, just slower.</details>
+<details><summary>Offline machine?</summary>Everything works except the live fetch (EXP-05 flags a deterministic fallback instead of failing).</details>
+</section>
+
+<section class="card"><h2>Glossary (12 terms)</h2>
+<div class="grid g2">
+<div class="tile"><b>Prefill / Decode.</b> Whole-prompt processing → first token; then one token at a time.</div>
+<div class="tile"><b>TTFT / TPOT.</b> Time to first token / per output token. Prefix hits cut TTFT.</div>
+<div class="tile"><b>Token.</b> Numbered word-piece; caches match tokens, not meanings.</div>
+<div class="tile"><b>K / V / Q.</b> Key, value, query projections; queries score keys, blend values.</div>
+<div class="tile"><b>Prefix cache.</b> Cross-request K/V reuse of a shared leading span.</div>
+<div class="tile"><b>Block.</b> Fixed token group (e.g. 16) — the cache/eviction unit.</div>
+<div class="tile"><b>Hit rate.</b> Share of needed blocks served from cache.</div>
+<div class="tile"><b>LRU.</b> Evict least-recently-used first.</div>
+<div class="tile"><b>Stack distance.</b> Distinct pages since last use; hit iff ≤ capacity.</div>
+<div class="tile"><b>Working set.</b> Smallest capacity hitting your target rate.</div>
+<div class="tile"><b>Knee.</b> Point where more memory buys ~nothing.</div>
+<div class="tile"><b>Cache salt.</b> Per-tenant hash salt isolating prefixes (security).</div>
+</div></section>
+</main>
+<footer>MIT · All numbers from executed experiments (<code>results/</code>) · Reproduce: <code>docker compose up --build</code> · Cite the repo README.<br>Single file, no external requests — works offline and on GitHub Pages.</footer>
+<script>
+"use strict";
+// ---------- Demo engine ----------
+var demos={
+d1:{frames:[
+"Turn 1: tokens [read][paper][tool?] → compute K/V for all 3 (prefill). Cache: K1 K2 K3.",
+"Token 4 arrives: [call:search]. Old rows K1–K3 UNCHANGED (causal: past never looks forward).",
+"Compute only q4,k4,v4 → score q4 vs K1..K4 → blend V1..V4. Output == full recompute (err 1.15e-14).",
+"Token 5 arrives: same story. Caching removes repeated work; generation itself still costs compute."],
+caps:["prefill fills the cache","incremental decode reuses it","exact equality","reuse ≠ free generation"]},
+d2:{frames:[
+"Cached: [system][you][are][a] | [coding][assistant][with][history]  (blocks of 4)",
+"Request B (exact + tail): [system][you][are][a] HIT · [coding][assistant][with][history] HIT · [run][tests][now][+] new → 3/3 cached.",
+"Request C (paraphrase): [system][you][are][a] HIT · [coding][helper][with][log] MISS → truncate → 1/3.",
+"Lesson: block keys embed prefix+block tokens. Similar meaning, different tokens ⇒ miss."] ,
+caps:["baseline cached","exact prefix hits","paraphrase misses","tokens, not meaning"]},
+d3:{frames:[
+"Cache capacity 4 blocks. Request A fills [A1 A2 A3 A4]. All resident.",
+"Request B arrives: needs 4 new blocks → LRU evicts A1..A4 (least recent first). Hit rate 0.0 — thrash.",
+"Capacity 32 instead: A stays resident when B runs → 0.667 hits. Evicted state = recompute.",
+"Concurrency twist: 12 sessions interleaved → 0.388; sequential → 0.846. Locality beats memory."],
+caps:["small cache fills","eviction forces recompute","capacity restores hits","schedule for locality"]}};
+var cur='d1',fi=0,timer=null;
+var stage=document.getElementById('stage'),cap=document.getElementById('cap');
+function render(){var d=demos[cur];stage.innerHTML='<div class="pill">step '+(fi+1)+' / '+d.frames.length+'</div><p>'+d.frames[fi]+'</p><div class="bar"><i style="width:'+Math.round((fi+1)/d.frames.length*100)+'%"></i></div>';cap.textContent='· '+d.caps[fi];}
+function stop(){if(timer){clearInterval(timer);timer=null;}}
+document.querySelectorAll('[data-t]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-t]').forEach(function(x){x.classList.remove('on')});b.classList.add('on');cur=b.dataset.t;fi=0;stop();render();};});
+document.getElementById('play').onclick=function(){stop();timer=setInterval(function(){fi=(fi+1)%demos[cur].frames.length;render();},2200);};
+document.getElementById('step').onclick=function(){stop();fi=(fi+1)%demos[cur].frames.length;render();};
+document.getElementById('reset').onclick=function(){stop();fi=0;render();};
+render();
+// ---------- Charts (real measured numbers) ----------
+function axes(ctx,W,H,P){ctx.strokeStyle='#2b3a6b';ctx.fillStyle='#a7b3d6';ctx.font='11px sans-serif';var ys=[0,.25,.5,.75,1];ys.forEach(function(f){var y=P+(1-f)*(H-2*P);ctx.strokeStyle='#1b2550';ctx.beginPath();ctx.moveTo(P,y);ctx.lineTo(W-P,y);ctx.stroke();ctx.fillText(f.toFixed(2),8,y+4);});}
+function lineChart(id,xs,yss,labels,marks){var c=document.getElementById(id),ctx=c.getContext('2d'),W=c.width,H=c.height,P=44;ctx.clearRect(0,0,W,H);axes(ctx,W,H,P);var cols=['#7dd3fc','#34d399'];var lx=xs.map(function(x){return Math.log10(x)}),x0=Math.min.apply(0,lx),x1=Math.max.apply(0,lx);function X(v){return P+(Math.log10(v)-x0)/(x1-x0)*(W-2*P)}function Y(v){return P+(1-v)*(H-2*P)}
+xs.forEach(function(x){ctx.fillStyle='#a7b3d6';ctx.fillText(x,X(x)-8,H-8);});
+yss.forEach(function(ys,i){ctx.strokeStyle=cols[i%2];ctx.lineWidth=2.5;ctx.beginPath();xs.forEach(function(x,j){var px=X(x),py=Y(ys[j]);j?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();ctx.fillStyle=cols[i%2];xs.forEach(function(x,j){ctx.beginPath();ctx.arc(X(x),Y(ys[j]),4,0,7);ctx.fill();});});
+(marks||[]).forEach(function(m){ctx.strokeStyle='#fbbf24';ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(X(m.x),P);ctx.lineTo(X(m.x),H-P);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#fbbf24';ctx.fillText(m.l,X(m.x)-30,P-8);});
+ctx.fillStyle='#e8ecf8';ctx.fillText(labels[0],P+6,P-20);}
+lineChart('c1',[4,8,16,32,64,128,256,512],[[0,0.086,0.303,0.351,0.415,0.755,0.845,0.845]],['EXP-04 curve'],[{x:122,l:'ws70=122'},{x:256,l:'knee=256'}]);
+(function(){var c=document.getElementById('c2'),ctx=c.getContext('2d'),W=c.width,H=c.height;ctx.clearRect(0,0,W,H);var vals=[['sequential',0.846,'#34d399'],['interleaved',0.388,'#f87171']];vals.forEach(function(v,i){var bw=200,x=120+i*300,y0=H-40,y1=40+(1-v[1])*(H-100);ctx.fillStyle=v[2];ctx.fillRect(x,y1,bw,y0-y1);ctx.fillStyle='#e8ecf8';ctx.font='bold 16px sans-serif';ctx.fillText(v[1].toFixed(3),x+70,y1-10);ctx.font='13px sans-serif';ctx.fillStyle='#a7b3d6';ctx.fillText(v[0],x+55,y0+20);});ctx.fillStyle='#a7b3d6';ctx.fillText('Δ = 0.458 — scheduling beats raw memory',300,30);})();
+lineChart('c3',[8,16,32,64,128,256,512],[[0.022,0.043,0.130,0.178,0.214,0.408,0.814]],['EXP-05 replay'],[{x:404,l:'ws80=404'}]);
+// ---------- Quiz ----------
+var Q=[
+["What does prefill do, and what does TTFT measure?",["It processes the whole prompt and emits the first token; TTFT is the wait for that token","It generates tokens one by one; TTFT is total time","It evicts cache entries; TTFT is eviction latency"],0,"Prefill = whole prompt at once → first token. TTFT = time to that token."],
+["Why do earlier K/V rows stay valid for new tokens?",["Causal attention: tokens only look backward, so past rows never change","Because the GPU is fast","Because tokens are encrypted"],0,"Past never depends on future — stored K/V remain correct inputs."],
+["EXP-01: cached vs recomputed agreed to…?",["1.15e-14 (assertion < 1e-9)","Exactly 50%","It disagreed"],0,"Reuse is exact, not approximate."],
+["EXP-02: exact repeat vs paraphrase hits?",["3/3 vs 1/3 — caches key on exact tokens, not meaning","3/3 vs 3/3","0/3 vs 0/3"],0,"Similar ≠ reusable."],
+["A 70B-GQA token and a 32K context cost…?",["327,680 B (320 KiB); 10 GiB per 32K","1 KB; 32 MB","1 GB; 32 TB"],0,"Section 4 table, asserted in code."],
+["Eviction demo: 4-block vs 32-block hit rates?",["0.0 vs 0.667 — evicted state must be recomputed","0.9 vs 0.9","It never evicts"],0,"Finite capacity bounds reuse."],
+["Working sets in EXP-04? Why is ws90 null?",["122 @70%, 136 @80%; 90% exceeds the trace max (0.845)","10 @70%, 20 @80%; bug","All null"],0,"Targets matter; extreme coverage need not converge."],
+["Mattson one-pass vs naive simulation differed by…?",["0.0 at every capacity","0.5","Unknown"],0,"The one-pass theorem, verified."],
+["Live BurstGPT: n, mean, p50, p99 — and replay ws80?",["2000, 551.7, 334, 2018; ws80 = 404 pages","100, 10, 10, 10; ws80 = 1","No live data"],0,"Heavy-tailed reality (p99 ≈ 6× p50)."],
+["Name the hidden patterns + the rule.",["H1 0.846→0.388 locality gap; H2b block-count pitfall (16×); H4 0.244 cold start — normalize by TOKENS","No patterns found","Only H1"],0,"Scheduling beats memory; always fix the token budget."]];
+var qbox=document.getElementById('qs'),scoreEl=document.getElementById('score'),picked=new Array(Q.length).fill(-1);
+Q.forEach(function(q,i){var d=document.createElement('div');d.className='q';var h='<p>'+(i+1)+'. '+q[0]+'</p>';q[1].forEach(function(o,j){h+='<label><input type="radio" name="q'+i+'" value="'+j+'"> '+o+'</label>';});h+='<div class="fb mut"></div>';d.innerHTML=h;qbox.appendChild(d);var r=d.querySelectorAll('input');r.forEach(function(rd){rd.onchange=function(){picked[i]=+rd.value;var fb=d.querySelector('.fb');if(+rd.value===q[2]){fb.innerHTML='<span class="ok">✓ Correct.</span> '+q[3];}else{fb.innerHTML='<span class="no">✗ Not quite.</span> '+q[3];}update();};});});
+function update(){var s=0;picked.forEach(function(p,i){if(p===Q[i][2])s++;});scoreEl.textContent='Score: '+s+' / '+Q.length+(s>=8?' — professional. Well done.':s>=5?' — getting there; replay the demos.':' — start at step 0 above.');}
+document.getElementById('grade').onclick=function(){var s=0;picked.forEach(function(p,i){if(p===Q[i][2])s++;else{var d=qbox.children[i].querySelector('.fb');if(p===-1)d.innerHTML='<span class="no">Unanswered.</span> '+Q[i][3];}});update();window.location.hash='#quiz';};
+document.getElementById('retry').onclick=function(){picked.fill(-1);qbox.querySelectorAll('input').forEach(function(r){r.checked=false;});qbox.querySelectorAll('.fb').forEach(function(f){f.textContent='';});update();};
+</script>
+</body>
+</html>

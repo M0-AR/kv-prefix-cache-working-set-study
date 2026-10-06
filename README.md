@@ -7,9 +7,15 @@
 [![Docker ready](https://img.shields.io/badge/docker-ready-blue.svg)](Dockerfile)
 [![Experiments: 6 passing](https://img.shields.io/badge/experiments-6_passing-brightgreen.svg)](experiments/run_all.py)
 [![Results reproduced](https://img.shields.io/badge/results-reproduced-success.svg)](results/)
-[![Interactive site](https://img.shields.io/badge/site-preview.html-orange.svg)](preview.html)
+[![Interactive site](https://img.shields.io/badge/site-preview.html-orange.svg)](https://m0-ar.github.io/kv-prefix-cache-working-set-study/preview.html)
 
-**[🌐 Open the interactive site](preview.html)** · **[📖 Beginner guide](#-beginner-guide--read-this-and-you-are-a-professional)** · **[🧪 Quiz yourself](#-test-yourself--interactive-quiz)** · **[🎬 Demo](#-demo--watch-it-run)** · **[📊 Results](#6-results-all-values-are-executed-outputs-in-results)**
+**[🌐 Open the interactive site](https://m0-ar.github.io/kv-prefix-cache-working-set-study/preview.html)** · **[📖 Beginner guide](#-beginner-guide--read-this-and-you-are-a-professional)** · **[🧪 Quiz yourself](#-test-yourself--interactive-quiz)** · **[🎬 Demo](#-demo--watch-it-run)** · **[📊 Results](#6-results-all-values-are-executed-outputs-in-results)**
+
+> **Site URLs (rendered pages, open in browser):**
+> home — <https://m0-ar.github.io/kv-prefix-cache-working-set-study/> ·
+> interactive — <https://m0-ar.github.io/kv-prefix-cache-working-set-study/preview.html> ·
+> mirror — <https://m0-ar.github.io/kv-prefix-cache-working-set-study/docs/preview.html>
+> (which one resolves depends on the Pages source setting — see [Interactive site + GitHub Pages](#-interactive-site--github-pages). Locally, just double-click `preview.html`.)
 
 ---
 
@@ -26,7 +32,7 @@
 | 🔬 Experiments 01–06 | `experiments/` | Six asserted checks; every paper number comes from these |
 | 🧱 Library | `src/` | Toy causal attention, LRU prefix cache, Mattson analyzer, memory model, trace loader |
 | 📦 Measured results | `results/` | JSON + CSV regenerated on every run (never hand-edited) |
-| 🌐 Interactive site | `preview.html` (+ `docs/index.html` for Pages) | Animated demos, charts, step-by-step walkthrough, quiz |
+| 🌐 Interactive site | `preview.html` (+ `docs/preview.html` + `docs/index.html` mirrors; `index.html` entry) | Animated demos, charts, step-by-step walkthrough, quiz |
 | 📊 Figures | `assets/*.svg` | Generated from measured results by `assets/generate_figures.py` |
 | 🎬 Demo | `scripts/demo.sh`, `docs/DEMO.md`, `docs/demo.tape` | 60-second terminal demo + GIF/MP4 recording guide |
 | 🐳 Reproducible runner | `Dockerfile`, `docker-compose.yml`, `Makefile` | Bit-identical reruns anywhere |
@@ -46,7 +52,7 @@ docker compose up --build
 # ALL EXPERIMENTS PASSED
 ```
 
-Then open `preview.html` in any browser (or the hosted Pages link below) for the visual tour.
+Then open the hosted site above — or locally double-click `preview.html` — for the visual tour.
 
 ## Table of contents
 
@@ -119,7 +125,7 @@ You can now answer, from first principles with numbers: why agents are expensive
 | 🧾 Byte-level memory model | Per-model bytes/token, GiB/context, 1/(1−r) leverage | `src/memory_model.py` |
 | 🌍 Live-data replay | BurstGPT fetched at runtime; source recorded in output | `src/trace_loader.py` |
 | 📊 Generated figures | SVGs built from measured results, never hand-drawn | `assets/` |
-| 🌐 Interactive site | Animations, charts, walkthrough, graded quiz — offline-capable single file | `preview.html`, `docs/index.html` |
+| 🌐 Interactive site | Animations, charts, walkthrough, graded quiz — offline-capable single file, mirrored so every Pages source setting resolves | `preview.html`, `docs/preview.html`, `docs/index.html`, `index.html` |
 | 🎬 Demo pipeline | 60-s terminal demo + reproducible GIF/MP4 guide | `scripts/demo.sh`, `docs/DEMO.md` |
 | 🐳 One-command reproduction | Docker + pinned deps + seeds; host == container | `Dockerfile`, `docker-compose.yml` |
 | ✅ Offline test suite | 5 fast tests, no network needed | `tests/` |
@@ -127,7 +133,7 @@ You can now answer, from first principles with numbers: why agents are expensive
 
 ## 👥 User stories — who this repo is for
 
-- **🎓 The student:** "I keep hearing KV cache and prefix caching — what *actually* happens?" → Read the Beginner guide (15 min), play the animated demo in `preview.html`, take the quiz. You will be able to whiteboard the whole mechanism.
+- **🎓 The student:** "I keep hearing KV cache and prefix caching — what *actually* happens?" → Read the Beginner guide (15 min), play the animated demo in the [interactive site](https://m0-ar.github.io/kv-prefix-cache-working-set-study/preview.html), take the quiz. You will be able to whiteboard the whole mechanism.
 - **💼 The interview candidate:** "I need to sound senior on LLM inference." → Memorize 5 numbers: 320 KiB/token, 10 GiB/32K, 122 @70% / 136 @80%, 0.846→0.388 locality gap, normalize-by-tokens rule. Each has an experiment behind it — cite EXP-01…06.
 - **🛠️ The inference engineer:** "How big should my prefix cache be?" → Copy `src/stack_distance.py` + `src/prefix_cache.py` onto your own request trace; read off your working set and knee exactly as EXP-04 does.
 - **📈 The capacity planner:** "What does 10K concurrent agent sessions cost?" → Combine `src/memory_model.py` bytes/token with your measured hit curve and the `1/(1−r)` leverage to price memory vs. compute.
@@ -142,24 +148,51 @@ You can now answer, from first principles with numbers: why agents are expensive
 ./scripts/demo.sh
 ```
 
-**Animated in-page demo** (no install): open `preview.html` → sections *Watch it work* — K/V reuse, prefix hits, and LRU eviction animate step by step.
+**Animated in-page demo** (no install): open the [interactive site](https://m0-ar.github.io/kv-prefix-cache-working-set-study/preview.html) → sections *Watch it work* — K/V reuse, prefix hits, and LRU eviction animate step by step.
 
 **Record your own GIF/MP4** (for sharing): full guide in [`docs/DEMO.md`](docs/DEMO.md) — scriptable VHS path (`docs/demo.tape`), asciinema path, and GUI path, with the pre-launch verification checklist. Place output at `assets/demo.gif` (< 2 MB) and link it here.
 
 ## 🌐 Interactive site + GitHub Pages
 
-`preview.html` is a dependency-free single file (works double-clicked, offline). `docs/index.html` is the identical file for hosting.
+The site is a dependency-free single file (works double-clicked, offline, no external requests). It is mirrored so it resolves under **either** Pages source setting:
 
-**Publish it (GitHub Pages, deploy-from-branch, 2026 flow):**
+| File in repo | Served at with source `/docs` | Served at with source `/` (root) |
+|---|---|---|
+| `docs/index.html` | `/` ✅ (entry) | not published |
+| `docs/preview.html` | `/preview.html` ✅ | `/docs/preview.html` ✅ |
+| `preview.html` (root mirror, byte-identical) | not published | `/preview.html` ✅ |
+| `index.html` (root entry, redirects to `preview.html`) | not published | `/` ✅ |
+| `.nojekyll` at root **and** `docs/.nojekyll` | keeps Pages from Jekyll-processing the source folder | same |
+
+Recommended setting is **`/docs`** (root stays clean); the root mirrors make the recommendation non-fatal if the setting is `/`.
+
+**Publish it (deploy-from-branch flow):**
 
 1. Push this repo to GitHub.
 2. Open **Settings → Pages**.
 3. Under **Build and deployment → Source**, choose **Deploy from a branch**.
-4. Set **Branch** to `main` (or your default) and **Folder** to `/docs`, then **Save**.
-5. Wait ~1 minute; your site is live at `https://<user>.github.io/<repo>/`.
-6. Put that URL at the top of this README (replacing the `preview.html` link target) and in the repo's **About → Website** field with topics like `llm-inference`, `kv-cache`, `prefix-caching`, `capacity-planning`.
+4. Set **Branch** to `main` and **Folder** to `/docs`, then **Save**.
+5. Wait 1–2 minutes, confirm the Actions run *"pages build and deployment"* is green, then probe (no login needed):
 
-(Alternative: publish from root `/` if you prefer `preview.html` as the entry point; `/docs` keeps the root clean and is the documented Pages source-folder option alongside root.)
+```bash
+BASE="https://m0-ar.github.io/kv-prefix-cache-working-set-study"
+for p in "" "preview.html" "docs/preview.html"; do
+  printf "/%s -> " "$p"; curl -s -o /dev/null -w "%{http_code}\n" "$BASE/$p"
+done
+```
+
+Read the result like this:
+
+| `/` | `/preview.html` | `/docs/preview.html` | Meaning |
+|---|---|---|---|
+| 200 | 200 | 404 | source = `/docs` ✅, all good |
+| 200 | 200 | 200 | source = `/` (root), all good via mirrors |
+| 404 | 404 | 404 | Pages off / still building / wrong branch |
+| 200 | 404 | 404 | entry exists but page files missing — re-check the file map above |
+
+A green deployment only proves *something* built — it never proves *your path* exists under the configured source. If you change Settings → Pages, wait 1–2 min and re-probe before concluding anything.
+
+6. Put `https://m0-ar.github.io/kv-prefix-cache-working-set-study/preview.html` in the repo's **About → Website** field with topics like `llm-inference`, `kv-cache`, `prefix-caching`, `capacity-planning`.
 
 ## 📊 Results gallery
 
@@ -181,7 +214,7 @@ Full numbers: [Section 6](#6-results-all-values-are-executed-outputs-in-results)
 
 ## 🧩 Test yourself — interactive quiz
 
-Ten questions, scratch-to-pro, with instant grading in [`preview.html`](preview.html#quiz) (also listed here so the repo is self-contained):
+Ten questions, scratch-to-pro, with instant grading in the [interactive quiz](https://m0-ar.github.io/kv-prefix-cache-working-set-study/preview.html#quiz) (also listed here so the repo is self-contained):
 
 1. What does the prefill stage do, and what does TTFT measure?
 2. In causal attention, why do earlier tokens' K/V rows stay valid when new tokens arrive?
@@ -462,7 +495,7 @@ Prefix reuse is a timing side channel (CVE-2025-46570): TTFT differences reveal 
 
 **Offline machine?** Everything except EXP-05's live fetch works offline (it records a `synthetic-fallback` source flag instead of failing). Tests never touch the network.
 
-**Where is the website?** `preview.html` (single file, offline). Hosted: enable Pages per [above](#-interactive-site--github-pages) — `docs/index.html` is the same file.
+**Where is the website?** Rendered copies (open in browser): [home](https://m0-ar.github.io/kv-prefix-cache-working-set-study/) · [interactive](https://m0-ar.github.io/kv-prefix-cache-working-set-study/preview.html) · [mirror](https://m0-ar.github.io/kv-prefix-cache-working-set-study/docs/preview.html). Locally: double-click `preview.html` (single file, offline). If a link 404s while the deploy is green, see the [URL map + probes](#-interactive-site--github-pages) — the file exists, the source setting just points elsewhere.
 
 ## 📖 Glossary
 
@@ -491,7 +524,7 @@ Prefix reuse is a timing side channel (CVE-2025-46570): TTFT differences reveal 
 | EXP-05 shows `synthetic-fallback` | No network to raw.githubusercontent.com | Inspect `results/05.json` → `burst_url`; rerun online for live numbers |
 | `docker compose up` slow first time | Base image pull + pip install | Subsequent runs are cached; use `make run` for host runs |
 | Quiz/animations don't load | Opened via restrictive viewer | Open `preview.html` in Chrome/Firefox/Edge directly; no server needed |
-| Pages shows 404 | Wrong source folder | Settings → Pages → Branch `main`, Folder `/docs`; ensure `docs/index.html` exists |
+| Pages shows 404 on one URL but deploy is green | Publishing-source mismatch (file lives under the other source) | Run the three probes in [Interactive site + GitHub Pages](#-interactive-site--github-pages); with `/docs` expect 200/200/404, with `/` expect 200/200/200 — both are correct, each URL is covered by a mirror |
 
 ## 🗺️ Roadmap
 
