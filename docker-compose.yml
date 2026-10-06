@@ -1,0 +1,8 @@
+services:
+  study:
+    build: .
+    volumes:
+      - ./results:/work/results
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONHASHSEED=0
